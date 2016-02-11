@@ -33,8 +33,8 @@ access_dpid = 0x4000
 class MWCController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
-    def is_slow(self, hw_addr):
-        return False
+    def is_slow(self, pkt):
+        return True
 
     def __init__(self, *args, **kwargs):
         super(MWCController, self).__init__(*args, **kwargs)
@@ -101,7 +101,7 @@ class MWCController(app_manager.RyuApp):
         out = None
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
-        if eth.ethertype not in [0x86DD]:
+        if eth.ethertype not in [0x86DD,0x88CC]:
             self.logger.info("packet in %d @ %ld " % (eth.ethertype, time.time()))
 
         self.mac_to_port[eth.src] = in_port
@@ -120,7 +120,7 @@ class MWCController(app_manager.RyuApp):
 
 
             core_next_port = None
-            slow = self.is_slow(eth.dst)
+            slow = self.is_slow(pkt)
             if slow:
                 core_next_port = 1
 
@@ -154,7 +154,7 @@ class MWCController(app_manager.RyuApp):
             if len(arps) > 0:
 
                 arp_message = arps[0]
-                if self.is_slow(arp_message.dst_mac):
+                if self.is_slow(pkt):
                     access_next_port = 1
 
                 else:
@@ -166,7 +166,7 @@ class MWCController(app_manager.RyuApp):
             elif len(ipv4s) > 0:
                 ip_message = ipv4s[0]
 
-                if self.is_slow(ip_message.dst_ip):
+                if self.is_slow(pkt):
                     access_next_port = 1
 
                 else:

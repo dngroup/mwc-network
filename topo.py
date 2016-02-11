@@ -35,7 +35,7 @@ class MWCTopo(Topo):
         self.addLink(fast, access, bw=200,port1=2,port2=2)
         self.addLink(server0, access, bw=200,port1=1,port2=3)
 
-        for i in range(1, 3):
+        for i in range(1, 64):
             hosts["h%d" % i] = self.addHost("h%d" % i, ip='10.0.0.%d/24' % (i + 3))
 
             self.addLink(core, hosts["h%d" % i], port1=100 + i, port2=1, bw=200)
