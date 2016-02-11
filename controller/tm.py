@@ -6,13 +6,52 @@ from ryu.controller.handler import MAIN_DISPATCHER, DEAD_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.lib import hub
 
+import time
+
+import milestone1
+import threading
+import json
+from SimpleXMLRPCServer import SimpleXMLRPCServer
+
+
+
+
+
+
+JSON_MAX = 30
 
 class SimpleMonitor(simple_switch_13.SimpleSwitch13):
 
     def __init__(self, *args, **kwargs):
         super(SimpleMonitor, self).__init__(*args, **kwargs)
         self.datapaths = {}
+        self.totals = {}
+        self.slices = {}
+        #self.bwstats = BandwidthStats(self.topo)
         self.monitor_thread = hub.spawn(self._monitor)
+
+        self.rpcStart()
+
+    def rpcStart(self):
+        self.server = SimpleXMLRPCServer(("localhost", 8000), logRequests=False)
+        self.server.register_instance(self)
+        self.server.register_function(self.rpcLoadPolicy, "load")
+        # self.server.register_function(self.rpcLoadPolicy, "load")
+        # self.server.register_function(self.rpcCurrentPolicy, "current")
+        thread = threading.Thread(target=self.server.serve_forever)
+        thread.start()
+        self.logger.info("starting rpc server")
+
+    def rpcLoadPolicy(self, nbHost, nbSlow):
+        str = "rpc request load {0} host with  {1} slow (befort {2} host with  {3} slow ))".format(nbHost, nbSlow, milestone1.nbHost, milestone1.nbSlow)
+        self.logger.info(str)
+        milestone1.nbHost=nbHost
+        milestone1.nbSlow=nbSlow
+        return (True, str)
+
+
+
+
 
     @set_ev_cls(ofp_event.EventOFPStateChange,
                 [MAIN_DISPATCHER, DEAD_DISPATCHER])
@@ -44,6 +83,30 @@ class SimpleMonitor(simple_switch_13.SimpleSwitch13):
         req = parser.OFPPortStatsRequest(datapath, 0, ofproto.OFPP_ANY)
         datapath.send_msg(req)
 
+    def addHostBwStat(self,serverName, rxbytes, txbytes):
+        host_rx = txbytes
+        host_tx = rxbytes
+
+        if serverName not in self.totals:
+            self.totals[serverName] = []
+            self.totals[serverName].append({ 'in' : 0,
+                                       'out' : 0
+                                   })
+            self.slices[serverName] = []
+
+        last = self.totals[serverName][-1]
+        rxslice = rxbytes - last['in']
+        txslice = txbytes - last['out']
+
+        self.slices[serverName].append({ 'in': rxslice,'out': txslice,'time':time.time() })
+        self.totals[serverName].append({ 'in': rxbytes,'out': txbytes,'time':time.time()})
+
+
+        if len(self.totals[serverName]) > JSON_MAX:
+                start = len(self.totals[serverName]) - JSON_MAX
+                self.totals[serverName] = self.totals[serverName][start:]
+                self.slices[serverName] = self.slices[serverName][start:]
+
     @set_ev_cls(ofp_event.EventOFPFlowStatsReply, MAIN_DISPATCHER)
     def _flow_stats_reply_handler(self, ev):
         body = ev.msg.body
@@ -74,13 +137,39 @@ class SimpleMonitor(simple_switch_13.SimpleSwitch13):
                          '-------- -------- -------- '
                          '-------- -------- --------')
         for stat in sorted(body, key=attrgetter('port_no')):
-            self.logger.debug(ev.msg.datapath.id)
+
             self.logger.info('%016x %8x %8d %8d %8d %8d %8d %8d', 
                              ev.msg.datapath.id, stat.port_no,
                              stat.rx_packets, stat.rx_bytes, stat.rx_errors,
                              stat.tx_packets, stat.tx_bytes, stat.tx_errors)
-            if (ev.msg.datapath.id==1):
-                self.logger.info("equal 1")
+
+            if (ev.msg.datapath.id==4096):
+                self.logger.info("equal 1000 (slow)")
                 if (stat.port_no==1):
-                     self.logger.info("equal 1")
+                    self.logger.info("equal 1")
+                    self.addHostBwStat("slow",stat.rx_bytes,stat.tx_bytes)
+                    b = json.dumps(self.slices["slow"])
+                    self.toJsonFile(b,"slow.js")
+
+            if (ev.msg.datapath.id==8192):
+                self.logger.info("equal 2000 (fast)")
+                if (stat.port_no==1):
+                    self.logger.info("equal 1")
+                    self.addHostBwStat("fast",stat.rx_bytes,stat.tx_bytes)
+                    b = json.dumps(self.slices["fast"])
+                    self.toJsonFile(b,"fast.js")
+            if (ev.msg.datapath.id==12288):
+                self.logger.info("equal 3000 (kk)")
+                if (stat.port_no==1):
+                    self.logger.info("equal 1")
+                    self.addHostBwStat("autre",stat.rx_bytes,stat.tx_bytes)
+                    b = json.dumps(self.slices["autre"])
+                    self.toJsonFile(b,"autre.js")
+
+
+    def toJsonFile(self, b,nameFile):
+        print b
+        with open(nameFile, "w") as text_file:
+            text_file.write(str(b))
+
 

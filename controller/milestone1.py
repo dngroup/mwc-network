@@ -23,6 +23,8 @@ from ryu.lib.packet import packet
 from ryu.ofproto import ofproto_v1_3
 from ryu.ofproto.ether import ETH_TYPE_8021Q
 from ryu.topology.event import EventSwitchEnter
+import json
+
 
 # two vlans for 2 datapath
 vlan_slow_id = 0x1
@@ -31,13 +33,23 @@ core_slow_dpid = 0x1000
 core_fast_dpid = 0x2000
 core = 0x3000
 
+nbHost=0
+nbSlow=0
 
 def which_vlan(host_name):
-    # add fast/flow routing logic here
-    return vlan_fast_id
+    h =int(host_name.replace('h', ''))
+    if (h<=nbSlow):
+        vlan=vlan_slow_id
+    elif (h<=nbSlow):
+        vlan=vlan_fast_id
+
+
+    return vlan
 
 
 def is_edge_switch(switch_id):
+
+
     return False
 
 
