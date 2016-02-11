@@ -30,6 +30,9 @@ core_dpid = 0x3000
 access_dpid = 0x4000
 
 
+nbHost=0
+nbSlow=0
+
 class MWCController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
