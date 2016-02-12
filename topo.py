@@ -8,9 +8,8 @@ Adding the 'topos' dict with a key/value pair to generate our newly defined
 topology enables one to pass in '--topo=mytopo' from the command line.
 """
 
-from mininet.topo import Topo
 from mininet.node import Host
-from mininet.link import TCLink
+from mininet.topo import Topo
 
 
 class Server( Host ):
@@ -22,7 +21,7 @@ class Client( Host ):
     def config( self , **params):
         super( Host, self).config( **params )
         print (params)
-        self.cmd( 'while true; do curl http://10.0.0.1:8080/ >/dev/null 2>/dev/null && sleep 1  ; done &' )
+        self.cmd( 'while true; do curl http://10.0.0.2:8080/ >/dev/null 2>/dev/null && sleep 1  ; done &' )
 
 class MWCTopo(Topo):
     "Simple topology example."
@@ -48,7 +47,7 @@ class MWCTopo(Topo):
         self.addLink(fast, access, bw=200,port1=2,port2=2)
         self.addLink(server0, access, bw=200,port1=1,port2=3)
 
-        for i in range(1, 64):
+        for i in range(1, 3):
             hosts["h%d" % i] = self.addHost("h%d" % i, ip='10.0.0.%d/24' % (i + 3),cls=Client)
 
             self.addLink(core, hosts["h%d" % i], port1=100 + i, port2=1, bw=200)

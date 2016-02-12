@@ -26,22 +26,23 @@ from ryu.lib.packet import packet
 from ryu.ofproto import ofproto_v1_3
 from ryu.topology.event import EventSwitchEnter
 
-core_dpid = 0x3000
-access_dpid = 0x4000
+slow_dpid = 0x3001
+fast_dpid = 0x3002
 
+nbHost = 0
+nbSlow = 0
 
-nbHost=0
-nbSlow=0
 
 class MWCController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
     def is_slow(self, pkt):
-        return True
+        return False
 
     def __init__(self, *args, **kwargs):
         super(MWCController, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
+        self.switches = {}
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
@@ -74,11 +75,13 @@ class MWCController(app_manager.RyuApp):
         else:
             mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                     match=match, instructions=inst)
+        self.logger.debug("%s", str(mod))
         datapath.send_msg(mod)
 
     @set_ev_cls(EventSwitchEnter, MAIN_DISPATCHER)
     def _welcome(self, ev):
         dpid = ev.switch.dp.id
+        self.switches[dpid] = ev.switch.dp
         parser = ev.switch.dp.ofproto_parser
 
         if dpid == 0x3001 or dpid == 0x3002:  # slow or fast switch
@@ -104,7 +107,7 @@ class MWCController(app_manager.RyuApp):
         out = None
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
-        if eth.ethertype not in [0x86DD,0x88CC]:
+        if eth.ethertype not in [0x86DD, 0x88CC]:
             self.logger.info("packet in %d @ %ld " % (eth.ethertype, time.time()))
 
         self.mac_to_port[eth.src] = in_port
@@ -131,16 +134,25 @@ class MWCController(app_manager.RyuApp):
                 core_next_port = 2
             if len(arps) > 0:  # installing downstream flow
                 arp_message = arps[0]
-                self.add_flow(datapath, 1, match=parser.OFPMatch(eth_dst=arp_message.src_mac),
+
+                self.add_flow(self.switches[0x3000], 1, match=parser.OFPMatch(eth_dst=arp_message.src_mac),
                               actions=[parser.OFPActionOutput(in_port)])
-                self.add_flow(datapath, 1, match=parser.OFPMatch(eth_src=arp_message.src_mac),
+                self.add_flow(self.switches[0x3000], 1, match=parser.OFPMatch(eth_src=arp_message.src_mac),
                               actions=[parser.OFPActionOutput(core_next_port)])
+
+                self.add_flow(self.switches[0x3003], 1,
+                              match=parser.OFPMatch(in_port=3, eth_dst=arp_message.src_mac),
+                              actions=[parser.OFPActionOutput(core_next_port)])
+
             if len(ipv4s) > 0:  # installing downstream flow
                 ip_message = ipv4s[0]
-                self.add_flow(datapath, 1, match=parser.OFPMatch(ipv4_dst=ip_message.src),
-                              actions=[parser.OFPActionOutput(in_port)])
-                self.add_flow(datapath, 1, match=parser.OFPMatch(ipv4_src=ip_message.src),
-                              actions=[parser.OFPActionOutput(core_next_port)])
+                if ip_message.dst != "255.255.255.255":
+                    self.add_flow(self.switches[0x3000], 1, match=parser.OFPMatch(ipv4_dst=ip_message.src),
+                                  actions=[parser.OFPActionOutput(in_port)])
+                    self.add_flow(self.switches[0x3000], 1, match=parser.OFPMatch(ipv4_src=ip_message.src),
+                                  actions=[parser.OFPActionOutput(core_next_port)])
+                    self.add_flow(self.switches[0x3001], 1, match=parser.OFPMatch(in_port=3, ipv4_dst=ip_message.src, ),
+                                  actions=[parser.OFPActionOutput(in_port)])
 
             if in_port > 100 and core_next_port:  # upstream packet_out
                 out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
@@ -148,40 +160,6 @@ class MWCController(app_manager.RyuApp):
 
             else:  # downstearm
                 self.logger.debug("discarding downstream packet_in")
-
-        elif datapath.id == 0x3003:  # access
-
-
-            access_next_port = None
-            # downstream
-            if len(arps) > 0:
-
-                arp_message = arps[0]
-                if self.is_slow(pkt):
-                    access_next_port = 1
-
-                else:
-                    access_next_port = 2
-
-                self.add_flow(datapath, 1, match=parser.OFPMatch(in_port=3, eth_dst=arp_message.dst_mac),
-                              actions=[parser.OFPActionOutput(access_next_port)])
-
-            elif len(ipv4s) > 0:
-                ip_message = ipv4s[0]
-
-                if self.is_slow(pkt):
-                    access_next_port = 1
-
-                else:
-                    access_next_port = 2
-
-                self.add_flow(datapath, 1, match=parser.OFPMatch(in_port=3, ipv4_dst=ip_message.dst, ),
-                              actions=[parser.OFPActionOutput(in_port)])
-
-            if in_port == 3 and access_next_port:
-                out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                          in_port=in_port, actions=[parser.OFPActionOutput(access_next_port)],
-                                          data=data)
 
         if out:
             datapath.send_msg(out)
