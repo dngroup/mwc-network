@@ -57,7 +57,7 @@
             url: url + "/slow.json",
             async: false,
             success: function (result) {
-              
+
                 console.log(result);
 
 
@@ -66,8 +66,8 @@
                         data[entry.time]=entry;
                         timedate = new Date(entry.time*1000)
                         timeValue.push(new Date(entry.time*1000));
-                        outValue.push(entry.out);
-                        inValue.push(entry.in);
+                        outValue.push(entry.out/1024/1024);
+                        inValue.push(entry.in/1024/1024);
 //                        chart.flow({
 //                            columns: [
 //                                [dateStr[0],timedate],
@@ -102,7 +102,7 @@
 
     timer = setInterval(function () {
             getData()
-    	}, 2000);
+    	}, 1000);
 
 
 

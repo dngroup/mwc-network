@@ -11,7 +11,7 @@ from ryu.lib import hub
 
 import milestone1
 
-JSON_MAX = 30
+JSON_MAX = 3000
 
 
 class SimpleMonitor(milestone1.MWCController):
@@ -81,7 +81,7 @@ class SimpleMonitor(milestone1.MWCController):
         while True:
             for dp in self.datapaths.values():
                 self._request_stats(dp)
-            hub.sleep(10)
+            hub.sleep(1)
 
     def _request_stats(self, datapath):
         self.logger.debug('send stats request: %016x', datapath.id)
@@ -123,37 +123,37 @@ class SimpleMonitor(milestone1.MWCController):
     def _port_stats_reply_handler(self, ev):
         body = ev.msg.body
 
-        self.logger.info('datapath         port     '
-                         'rx-pkts  rx-bytes rx-error '
-                         'tx-pkts  tx-bytes tx-error')
-        self.logger.info('---------------- -------- '
-                         '-------- -------- -------- '
-                         '-------- -------- --------')
+        # self.logger.info('datapath         port     '
+        #                  'rx-pkts  rx-bytes rx-error '
+        #                  'tx-pkts  tx-bytes tx-error')
+        # self.logger.info('---------------- -------- '
+        #                  '-------- -------- -------- '
+        #                  '-------- -------- --------')
         for stat in sorted(body, key=attrgetter('port_no')):
 
-            self.logger.info('%016x %8x %8d %8d %8d %8d %8d %8d',
-                             ev.msg.datapath.id, stat.port_no,
-                             stat.rx_packets, stat.rx_bytes, stat.rx_errors,
-                             stat.tx_packets, stat.tx_bytes, stat.tx_errors)
+            # self.logger.info('%016x %8x %8d %8d %8d %8d %8d %8d',
+            #                  ev.msg.datapath.id, stat.port_no,
+            #                  stat.rx_packets, stat.rx_bytes, stat.rx_errors,
+            #                  stat.tx_packets, stat.tx_bytes, stat.tx_errors)
 
             if (ev.msg.datapath.id == milestone1.slow_dpid):
-                self.logger.info("equal 1000 (slow)")
+                # self.logger.info("equal 1000 (slow)")
                 if (stat.port_no == 1):
-                    self.logger.info("equal 1")
+                    # self.logger.info("equal 1")
                     self.addHostBwStat("slow", stat.rx_bytes, stat.tx_bytes)
                     b = json.dumps(self.slices["slow"])
                     self.toJsonFile(b, "slow.json")
 
             if (ev.msg.datapath.id == milestone1.fast_dpid):
-                self.logger.info("equal 2000 (fast)")
+                # self.logger.info("equal 2000 (fast)")
                 if (stat.port_no == 1):
-                    self.logger.info("equal 1")
+                    # self.logger.info("equal 1")
                     self.addHostBwStat("fast", stat.rx_bytes, stat.tx_bytes)
                     b = json.dumps(self.slices["fast"])
                     self.toJsonFile(b, "fast.json")
 
     def toJsonFile(self, b, nameFile):
-        print b
+        # print b
         with open(nameFile, "w") as text_file:
             text_file.write(str(b))
 
