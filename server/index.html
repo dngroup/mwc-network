@@ -1,15 +1,67 @@
 <html>
 <head>
     <link rel="stylesheet" type="text/css" href="css/c3.min.css">
+    <link rel="stylesheet" type="text/css" href="css/simple-slider.css">
 </head>
 <body data-feedly-mini="yes">
-<div id="chart">
 
-</div>
+<input class="nHost" type="text" data-slider="true" data-slider-range="0,128" data-slider-step="1"><div class="nhost value">0</div>
+<input class="nSlow" type="text" data-slider="true" data-slider-range="0,128" data-slider-step="1"><div class="nSlow value">0</div>
+<input class="rpc" type="button" value="Submit" onclick="doFunction();">
+<div id="chart"></div>
+<div id="chart2"></div>
 
 <script src="js/d3.min.js" charset="utf-8"></script>
 <script src="js/c3.min.js"></script>
 <script src="js/jquery.js"></script>
+<script src="js/jquery.xmlrpc.min.js"></script>
+<script src="js/simple-slider.min.js"></script>
+
+<script>
+    var url= window.location.origin;
+    var urlrpc=url.replace('9998','8000')
+
+    var nbhost=0;
+    var nbslow=0
+
+
+//    $("input.nhost").simpleSlider();
+    function doFunction(){
+        nbslowS=nbslow;
+        nbhostS=nbhost;
+        if (nbslow>nbhost){
+            nbslowS=nbhost;
+        }
+        $.xmlrpc({
+            url: urlrpc,
+            methodName: 'load',
+            params: [nbhostS, nbslowS],
+            success: function(response, status, jqXHR) {
+                console.log(response)
+
+            },
+            error: function(jqXHR, status, error) {
+                console.log(error)
+            }
+        });
+    }
+    $("input.nhost").bind("slider:changed", function (event, data) {
+        nbhost=data.value
+        console.log(data.value);
+        $("div.nhost").text(data.value);
+        // The value as a ratio of the slider (between 0 and 1)
+//        console.log(data.ratio);
+    });
+
+//    $("input.nSlow").simpleSlider();
+
+    $("input.nSlow").bind("slider:changed", function (event, data) {
+        nbslow=data.value
+        $("div.nSlow").text(data.value);
+    });
+
+</script>
+
 <script>
 
     var url = window.location.origin;
@@ -20,9 +72,6 @@
     var dateStr=["date"]
     var outStr=["out"];
     var inStr=["in"]
-
-
-
     var chart = c3.generate({
         bindto: '#chart',
         data: {
@@ -32,15 +81,6 @@
                 outStr.concat(outValue),
                 inStr.concat(inValue)
             ],
-//			onclick: function (d, element) {
-//				console.log("onclick", d, element);
-//			},
-//			onmouseover: function (d) {
-//				console.log("onmouseover", d);
-//			},
-//			onmouseout: function (d) {
-//				console.log("onmouseout", d);
-//			},
         },
         axis: {
             x: {
@@ -54,17 +94,17 @@
 
     function getData() {
         $.ajax({
-            url: url + "/slow.json",
-            async: false,
+            url: url + "/fast.json",
+
             success: function (result) {
 
-                console.log(result);
+//                console.log(result);
 
 
                 result.forEach(function(entry) {
                     if (!(entry.time in data)) {
                         data[entry.time]=entry;
-                        timedate = new Date(entry.time*1000)
+//                        timedate = new Date(entry.time*1000)
                         timeValue.push(new Date(entry.time*1000));
                         outValue.push(entry.out/1024/1024);
                         inValue.push(entry.in/1024/1024);
@@ -93,7 +133,72 @@
             }
         });
     }
-    ;
+
+    var dataF = {};
+    var timeValueF=[];
+    var outValueF=[];
+    var inValueF=[];
+
+    var chart2 = c3.generate({
+        bindto: '#chart2',
+        data: {
+            x: 'date',
+            columns: [
+                dateStr.concat(timeValueF),
+                outStr.concat(outValueF),
+                inStr.concat(inValueF)
+            ],
+        },
+        axis: {
+            x: {
+                type: 'timeseries',
+                tick: {
+                    format : "%H:%M:%S"
+                }
+            }
+        }
+    });
+
+    function getDataSlow() {
+        $.ajax({
+            url: url + "/slow.json",
+            success: function (result) {
+
+//                console.log(result);
+
+
+                result.forEach(function(entry) {
+                    if (!(entry.time in data)) {
+                        dataF[entry.time]=entry;
+//                        timedate = new Date(entry.time*1000)
+                        timeValueF.push(new Date(entry.time*1000));
+                        outValueF.push(entry.out/1024/1024);
+                        inValueF.push(entry.in/1024/1024);
+//                        chart.flow({
+//                            columns: [
+//                                [dateStr[0],timedate],
+//                                 [ outStr[0],entry.out],
+//                                 [ inStr[0],entry.in]
+//                            ],
+//                            length:10
+//
+//                        });
+
+                    }
+                });
+
+                chart2.load({
+                    columns: [
+                        dateStr.concat(timeValueF),
+                        outStr.concat(outValueF),
+                        inStr.concat(inValueF)
+                    ]
+                });
+
+
+            }
+        });
+    };
 
 
 
@@ -101,9 +206,11 @@
 
 
     timer = setInterval(function () {
-            getData()
+            getDataSlow()
     	}, 1000);
-
+    timer = setInterval(function () {
+        getData()
+    }, 1000);
 
 
 

@@ -1,7 +1,7 @@
 import json
 import threading
 import time
-from SimpleXMLRPCServer import SimpleXMLRPCServer
+from SimpleXMLRPCServer import SimpleXMLRPCServer,SimpleXMLRPCRequestHandler
 from operator import attrgetter
 
 from ryu.controller import ofp_event
@@ -11,8 +11,21 @@ from ryu.lib import hub
 
 import milestone1
 
-JSON_MAX = 3000
+JSON_MAX = 300
 
+class RequestHandler(SimpleXMLRPCRequestHandler):
+    rpc_paths = ('/', '/RPC2',)
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
+
+    # Add these headers to all responses
+    def end_headers(self):
+        self.send_header("Access-Control-Allow-Headers",
+                         "Origin, X-Requested-With, Content-Type, Accept")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        SimpleXMLRPCRequestHandler.end_headers(self)
 
 class SimpleMonitor(milestone1.MWCController):
     def __init__(self, *args, **kwargs):
@@ -27,7 +40,7 @@ class SimpleMonitor(milestone1.MWCController):
         self.logStart()
 
     def rpcStart(self):
-        self.server = SimpleXMLRPCServer(("localhost", 8000), logRequests=False)
+        self.server = SimpleXMLRPCServer(("0.0.0.0", 8000),requestHandler=RequestHandler, logRequests=False)
         self.server.register_instance(self)
         self.server.register_function(self.rpcLoadPolicy, "load")
         # self.server.register_function(self.rpcLoadPolicy, "load")
