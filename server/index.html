@@ -2,14 +2,32 @@
 <head>
     <link rel="stylesheet" type="text/css" href="css/c3.min.css">
     <link rel="stylesheet" type="text/css" href="css/simple-slider.css">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/simple-slider-volume.css">
+
 </head>
 <body data-feedly-mini="yes">
+<div class="col-lg-12 center-block" style="width: 300px">
 
-<input class="nHost" type="text" data-slider="true" data-slider-range="0,128" data-slider-step="1"><div class="nhost value">0</div>
-<input class="nSlow" type="text" data-slider="true" data-slider-range="0,128" data-slider-step="1"><div class="nSlow value">0</div>
-<input class="rpc" type="button" value="Submit" onclick="doFunction();">
-<div id="chart"></div>
-<div id="chart2"></div>
+    <div class="center-block">
+        <input class="nHost center-block" type="text" data-slider="true" data-slider-range="0,128" data-slider-step="1" data-slider-highlight="true" data-slider-theme="volume"></div>
+    Number host up <span class="nhost value text-center">0</span>
+
+    <div class="center-block">
+        <input class="nSlow center-block" type="text" data-slider="true" data-slider-range="0,128" data-slider-step="1" data-slider-highlight="true" data-slider-theme="volume"></div>
+    Number slow host <span class="nSlow value text-center">0</span>
+
+    <input class="rpc center-block" type="button" value="Submit" onclick="doFunction();">
+</div>
+<div class="col-lg-12">
+
+    <h3>CDN</h3>
+    <div id="chart2" ></div>
+    <h3>VCDN</h3>
+<div id="chart" ></div>
+
+</div>
+
 
 <script src="js/d3.min.js" charset="utf-8"></script>
 <script src="js/c3.min.js"></script>
@@ -48,7 +66,7 @@
     $("input.nhost").bind("slider:changed", function (event, data) {
         nbhost=data.value
         console.log(data.value);
-        $("div.nhost").text(data.value);
+        $("span.nhost").text(data.value);
         // The value as a ratio of the slider (between 0 and 1)
 //        console.log(data.ratio);
     });
@@ -57,7 +75,7 @@
 
     $("input.nSlow").bind("slider:changed", function (event, data) {
         nbslow=data.value
-        $("div.nSlow").text(data.value);
+        $("span.nSlow").text(data.value);
     });
 
 </script>
@@ -172,8 +190,8 @@
                         dataF[entry.time]=entry;
 //                        timedate = new Date(entry.time*1000)
                         timeValueF.push(new Date(entry.time*1000));
-                        outValueF.push(entry.out/1024/1024);
-                        inValueF.push(entry.in/1024/1024);
+                        outValueF.push(entry.out*8/1024/1024);
+                        inValueF.push(entry.in*8/1024/1024);
 //                        chart.flow({
 //                            columns: [
 //                                [dateStr[0],timedate],
@@ -207,10 +225,10 @@
 
     timer = setInterval(function () {
             getDataSlow()
-    	}, 1000);
+    	}, 10000);
     timer = setInterval(function () {
         getData()
-    }, 1000);
+    }, 10000);
 
 
 
