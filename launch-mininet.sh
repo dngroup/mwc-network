@@ -2,8 +2,8 @@
 
 echo "LAUNCH RYU"
 GUI_TOPO=$(locate gui_topology.py -n 1)
-#CONTROLLER=./controller/tm.py
-CONTROLLER=./controller/milestone1.py
+CONTROLLER=./controller/tm.py
+#CONTROLLER=./controller/milestone1.py
 
 xterm -fn 10x20 -e bash -c "ryu-manager --observe-links $GUI_TOPO $CONTROLLER" &
 

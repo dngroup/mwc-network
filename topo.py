@@ -16,12 +16,12 @@ class Server( Host ):
     def config( self, **params ):
         super( Host, self).config( **params )
         print (params)
-        self.cmd( 'while true; do  dd if=/dev/zero  count=$((1024+$RANDOM)) bs=1024 |nc -l 8080 ; done &' )
+        self.cmd( 'gunicorn --bind 0.0.0.0:8000 sourcebin.sourcebin:app -D --log-level debug --log-file sourcebin.log' )
 class Client( Host ):
     def config( self , **params):
         super( Host, self).config( **params )
         print (params)
-        self.cmd( 'while true; do curl http://10.0.0.2:8080/ >/dev/null 2>/dev/null && sleep 1  ; done &' )
+        self.cmd( 'while true; do curl -s "http://10.0.0.2:8000/data?chunk_size=100000&chunk_count=100" -o /dev/null && sleep 2  ; done &' )
 
 class MWCTopo(Topo):
     "Simple topology example."
@@ -47,7 +47,7 @@ class MWCTopo(Topo):
         self.addLink(fast, access, bw=200,port1=2,port2=2)
         self.addLink(server0, access, bw=200,port1=1,port2=3)
 
-        for i in range(1, 30):
+        for i in range(1, 4):
             hosts["h%d" % i] = self.addHost("h%d" % i, ip='10.0.0.%d/24' % (i + 3),cls=Client)
 
             self.addLink(core, hosts["h%d" % i], port1=100 + i, port2=1, bw=200)
