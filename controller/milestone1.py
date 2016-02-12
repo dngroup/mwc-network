@@ -36,8 +36,8 @@ nbSlow = 0
 class MWCController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
-    def is_slow(self, pkt):
-        return False
+    def is_slow(self, eth_src):
+        return int(eth_src.replace(':', ''), 16) % 2 == 0
 
     def __init__(self, *args, **kwargs):
         super(MWCController, self).__init__(*args, **kwargs)
@@ -126,12 +126,13 @@ class MWCController(app_manager.RyuApp):
 
 
             core_next_port = None
-            slow = self.is_slow(pkt)
+            slow = self.is_slow(eth.src)
             if slow:
                 core_next_port = 1
 
             else:
                 core_next_port = 2
+
             if len(arps) > 0:  # installing downstream flow
                 arp_message = arps[0]
 
