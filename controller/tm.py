@@ -24,6 +24,7 @@ class SimpleMonitor(milestone1.MWCController):
         self.monitor_thread = hub.spawn(self._monitor)
 
         self.rpcStart()
+        self.logStart()
 
     def rpcStart(self):
         self.server = SimpleXMLRPCServer(("localhost", 8000), logRequests=False)
@@ -34,6 +35,25 @@ class SimpleMonitor(milestone1.MWCController):
         thread = threading.Thread(target=self.server.serve_forever)
         thread.start()
         self.logger.info("starting rpc server")
+
+
+
+    def logStart(self):
+        import SimpleHTTPServer
+        import SocketServer
+
+        PORT = 9998
+
+        Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+
+        httpd = SocketServer.TCPServer(("", PORT), Handler)
+
+        print "serving at port", PORT
+
+        thread = threading.Thread(target= httpd.serve_forever)
+        thread.start()
+
+        pass
 
     def rpcLoadPolicy(self, nbHost, nbSlow):
         str = "rpc request load {0} host with  {1} slow (befort {2} host with  {3} slow ))".format(nbHost, nbSlow,
@@ -122,7 +142,7 @@ class SimpleMonitor(milestone1.MWCController):
                     self.logger.info("equal 1")
                     self.addHostBwStat("slow", stat.rx_bytes, stat.tx_bytes)
                     b = json.dumps(self.slices["slow"])
-                    self.toJsonFile(b, "slow.js")
+                    self.toJsonFile(b, "slow.json")
 
             if (ev.msg.datapath.id == milestone1.fast_dpid):
                 self.logger.info("equal 2000 (fast)")
@@ -130,9 +150,11 @@ class SimpleMonitor(milestone1.MWCController):
                     self.logger.info("equal 1")
                     self.addHostBwStat("fast", stat.rx_bytes, stat.tx_bytes)
                     b = json.dumps(self.slices["fast"])
-                    self.toJsonFile(b, "fast.js")
+                    self.toJsonFile(b, "fast.json")
 
     def toJsonFile(self, b, nameFile):
         print b
         with open(nameFile, "w") as text_file:
             text_file.write(str(b))
+
+

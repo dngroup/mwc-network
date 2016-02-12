@@ -1,0 +1,117 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="css/c3.min.css">
+</head>
+<body data-feedly-mini="yes">
+<div id="chart">
+
+</div>
+
+<script src="js/d3.min.js" charset="utf-8"></script>
+<script src="js/c3.min.js"></script>
+<script src="js/jquery.js"></script>
+<script>
+
+    var url = window.location.origin;
+    var data = {};
+    var timeValue=[];
+    var outValue=[];
+    var inValue=[];
+    var dateStr=["date"]
+    var outStr=["out"];
+    var inStr=["in"]
+
+
+
+    var chart = c3.generate({
+        bindto: '#chart',
+        data: {
+            x: 'date',
+            columns: [
+                dateStr.concat(timeValue),
+                outStr.concat(outValue),
+                inStr.concat(inValue)
+            ],
+//			onclick: function (d, element) {
+//				console.log("onclick", d, element);
+//			},
+//			onmouseover: function (d) {
+//				console.log("onmouseover", d);
+//			},
+//			onmouseout: function (d) {
+//				console.log("onmouseout", d);
+//			},
+        },
+        axis: {
+            x: {
+                type: 'timeseries',
+                tick: {
+                    format : "%H:%M:%S"
+                }
+            }
+        }
+    });
+
+    function getData() {
+        $.ajax({
+            url: url + "/slow.json",
+            async: false,
+            success: function (result) {
+              
+                console.log(result);
+
+
+                result.forEach(function(entry) {
+                    if (!(entry.time in data)) {
+                        data[entry.time]=entry;
+                        timedate = new Date(entry.time*1000)
+                        timeValue.push(new Date(entry.time*1000));
+                        outValue.push(entry.out);
+                        inValue.push(entry.in);
+//                        chart.flow({
+//                            columns: [
+//                                [dateStr[0],timedate],
+//                                 [ outStr[0],entry.out],
+//                                 [ inStr[0],entry.in]
+//                            ],
+//                            length:10
+//
+//                        });
+
+                    }
+                });
+
+                chart.load({
+                    columns: [
+                        dateStr.concat(timeValue),
+                        outStr.concat(outValue),
+                        inStr.concat(inValue)
+                    ]
+                });
+
+
+            }
+        });
+    }
+    ;
+
+
+
+
+
+
+    timer = setInterval(function () {
+            getData()
+    	}, 2000);
+
+
+
+
+
+
+</script>
+
+
+<div id="feedly-mini" title="feedly Mini tookit"></div>
+</body>
+</html>
